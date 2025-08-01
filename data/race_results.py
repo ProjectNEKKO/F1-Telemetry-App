@@ -9,6 +9,7 @@ def fetch_race_results(year=2024, round_number=1, session_type='R'):
   session.load()
 
   results = session.results[['Position', 'Abbreviation', 'TeamName', 'Points', 'Status']].copy()
+  results = results.drop_duplicates(subset=['Abbreviation']).reset_index(drop=True)
   laps = session.laps
 
   leader_code = results.iloc[0]['Abbreviation']
@@ -22,8 +23,8 @@ def fetch_race_results(year=2024, round_number=1, session_type='R'):
   for idx in range(len(results)):
     driver_code = results.iloc[idx]['Abbreviation']
 
-    #team_color_hex = session.get_driver(driver_code)['TeamColor']
-    #results.loc[idx, 'TeamColor'] = f"#{team_color_hex}"
+    team_color_hex = session.get_driver(driver_code)['TeamColor']
+    results.loc[idx, 'TeamColor'] = f"#{team_color_hex}"
 
     driver_status = results.iloc[idx]['Status']
     driver_laps = laps.pick_drivers(driver_code)
