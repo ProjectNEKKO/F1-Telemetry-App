@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 from PySide6.QtGui import QColor, QFont
+from PySide6.QtCore import Qt
 
 class MainWindow(QMainWindow):
   def __init__(self, results_df):
@@ -23,12 +24,19 @@ class MainWindow(QMainWindow):
         item = QTableWidgetItem(str(value))
         
         font = QFont()
-        if col_name in ["TeamName", "Gap to Leader", "Gap to Next"]:
-          font.setBold(True)
 
-        if col_name == "TeamName" and self.team_colors[row_number]:
-          team_color = QColor(self.team_colors[row_number])
-          item.setForeground(team_color)
+        if col_name == "TeamName":
+          font.setBold(True)
+          if self.team_colors[row_number]:
+            item.setForeground(QColor(self.team_colors[row_number]))
+          item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+
+        elif col_name in ["Gap to Leader", "Gap to Next"]:
+          font.setBold(True)
+          item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+
+        else:
+          item.setTextAlignment(Qt.AlignVCenter | Qt.AlignCenter)
           
         item.setFont(font)
         table.setItem(row_number, col_idx, item)
