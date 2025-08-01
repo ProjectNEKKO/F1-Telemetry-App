@@ -1,7 +1,7 @@
 import os
 import fastf1
 
-def fetch_race_results(year=2024, round_number=1, session_type='R'):
+def fetch_race_results(year=2022, round_number=2, session_type='R'):
   os.makedirs("cache", exist_ok=True)
   fastf1.Cache.enable_cache("cache")
 

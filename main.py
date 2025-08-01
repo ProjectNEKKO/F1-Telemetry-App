@@ -9,7 +9,7 @@ if __name__ == "__main__":
   results = fetch_race_results(year=2024, round_number=1, session_type='R')
 
   window = MainWindow(results)
-  window.resize(650, 400)
+  window.resize(750, 650)
   window.show()
 
   sys.exit(app.exec())
