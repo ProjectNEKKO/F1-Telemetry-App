@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHeaderView
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtCore import Qt
 
@@ -6,6 +6,8 @@ class MainWindow(QMainWindow):
   def __init__(self, results_df):
     super().__init__()
     self.setWindowTitle("F1 Race Results")
+    self.resize(850, 600)
+    self.setMinimumSize(750, 550)
 
     if "TeamColor" in results_df.columns:
       self.team_colors = results_df["TeamColor"].tolist()
@@ -41,6 +43,21 @@ class MainWindow(QMainWindow):
         item.setFont(font)
         table.setItem(row_number, col_idx, item)
 
+    header = table.horizontalHeader()
+    header.setSectionResizeMode(QHeaderView.Stretch)
+
+    header.setMinimumSectionSize(60)
+
+    for col_idx, col_name in enumerate(results_df.columns):
+      if col_name == "TeamName":
+        table.setColumnWidth(col_idx, 140)  # Initial size
+        header.resizeSection(col_idx, 140)
+      elif col_name in ["Gap to Leader", "Gap to Next"]:
+        table.setColumnWidth(col_idx, 100)
+        header.resizeSection(col_idx, 100)
+
+    table.resizeRowsToContents()
+    
     layout = QVBoxLayout()
     layout.addWidget(table)
     container = QWidget()
