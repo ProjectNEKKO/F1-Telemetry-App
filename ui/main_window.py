@@ -88,12 +88,14 @@ class MainWindow(QMainWindow):
     self.table.setColumnCount(len(results_df.columns))
     self.table.setHorizontalHeaderLabels(results_df.columns)
 
+    time_columns = {"Best Lap", "Q1", "Q2", "Q3"}
+
     for row_number, (_, row) in enumerate(results_df.iterrows()):
         for col_idx, col_name in enumerate(results_df.columns):
             value = row[col_name]
             item = QTableWidgetItem(str(value))
 
-            if col_name == "Best Lap":
+            if col_name in time_columns:
               if pd.notna(value):
                   ms = int(value.microseconds / 1000)
                   formatted = f"{value.seconds // 60}:{value.seconds % 60:02}.{ms:03}"

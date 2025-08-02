@@ -8,7 +8,7 @@ def fetch_qualifying_results(year=2024, round_number=1):
   session = fastf1.get_session(year, round_number, 'Q')
   session.load()
 
-  results = session.results[['Position', 'Abbreviation', 'TeamName', 'Status']].copy()
+  results = session.results[['Position', 'Abbreviation', 'TeamName', 'Q1', 'Q2', 'Q3']].copy()
   results = results.drop_duplicates(subset=['Abbreviation']).reset_index(drop=True)
 
   laps = session.laps
