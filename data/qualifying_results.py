@@ -30,6 +30,10 @@ def fetch_qualifying_results(year=2024, round_number=1):
 
   for idx in range(len(results)):
     current_best = results.iloc[idx]['Best Lap']
+    driver_code = results.iloc[idx]['Abbreviation']
+    team_color_hex = session.get_driver(driver_code)['TeamColor']
+    results.loc[idx, 'TeamColor'] = f"#{team_color_hex}"
+
 
     if idx == 0:
       gap_to_leader.append("Leader")
