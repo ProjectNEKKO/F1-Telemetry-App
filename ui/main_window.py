@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 
 from data.race_results import fetch_race_results
 from data.qualifying_results import fetch_qualifying_results
+from data.free_practice_results import fetch_free_practice_results
 from data.schedule import get_race_schedule
 
 import datetime
@@ -70,6 +71,8 @@ class MainWindow(QMainWindow):
         results_df = fetch_race_results(year, round_number, session_type)
     elif session_type == "Q":
         results_df = fetch_qualifying_results(year, round_number)
+    elif session_type in ["FP1", "FP2", "FP3"]:
+      results_df = fetch_free_practice_results(year, round_number, session_type)
     else:
         results_df = None
 
@@ -78,10 +81,12 @@ class MainWindow(QMainWindow):
 
   def update_table(self, results_df):
     if "TeamColor" in results_df.columns:
-        self.team_colors = results_df["TeamColor"].tolist()
-        results_df = results_df.drop(columns=["TeamColor"])
+      self.team_colors = results_df["TeamColor"].tolist()
+      results_df = results_df.drop(columns=["TeamColor"])
     else:
-        self.team_colors = [None] * len(results_df)
+      self.team_colors = [None] * len(results_df)
+
+    results_df = results_df.rename(columns={"Abbreviation": "Driver"})
 
     self.table.clear()
     self.table.setRowCount(len(results_df))
@@ -91,45 +96,45 @@ class MainWindow(QMainWindow):
     time_columns = {"Best Lap", "Q1", "Q2", "Q3"}
 
     for row_number, (_, row) in enumerate(results_df.iterrows()):
-        for col_idx, col_name in enumerate(results_df.columns):
-            value = row[col_name]
-            item = QTableWidgetItem(str(value))
+      for col_idx, col_name in enumerate(results_df.columns):
+        value = row[col_name]
+        item = QTableWidgetItem(str(value))
 
-            if col_name in time_columns:
-              if pd.notna(value):
-                  ms = int(value.microseconds / 1000)
-                  formatted = f"{value.seconds // 60}:{value.seconds % 60:02}.{ms:03}"
-                  item = QTableWidgetItem(formatted)
-              else:
-                  item = QTableWidgetItem("—")
-            else:
-              item = QTableWidgetItem(str(value))
+        if col_name in time_columns:
+          if pd.notna(value):
+            ms = int(value.microseconds / 1000)
+            formatted = f"{value.seconds // 60}:{value.seconds % 60:02}.{ms:03}"
+            item = QTableWidgetItem(formatted)
+          else:
+            item = QTableWidgetItem("—")
+        else:
+          item = QTableWidgetItem(str(value))
 
-            font = QFont()
-            if col_name == "TeamName":
-                font.setBold(True)
-                if self.team_colors[row_number]:
-                    item.setForeground(QColor(self.team_colors[row_number]))
-                item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-            elif col_name in ["Gap to Leader", "Gap to Next"]:
-                font.setBold(True)
-                item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-            else:
-                item.setTextAlignment(Qt.AlignVCenter | Qt.AlignCenter)
+        font = QFont()
+        if col_name == "TeamName":
+          font.setBold(True)
+          if self.team_colors[row_number]:
+            item.setForeground(QColor(self.team_colors[row_number]))
+          item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        elif col_name in ["Gap to Leader", "Gap to Next"]:
+          font.setBold(True)
+          item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        else:
+          item.setTextAlignment(Qt.AlignVCenter | Qt.AlignCenter)
 
-            item.setFont(font)
-            self.table.setItem(row_number, col_idx, item)
+        item.setFont(font)
+        self.table.setItem(row_number, col_idx, item)
 
     header = self.table.horizontalHeader()
     header.setSectionResizeMode(QHeaderView.Stretch)
     header.setMinimumSectionSize(60)
 
     for col_idx, col_name in enumerate(results_df.columns):
-        if col_name == "TeamName":
-            self.table.setColumnWidth(col_idx, 140)
-            header.resizeSection(col_idx, 140)
-        elif col_name in ["Gap to Leader", "Gap to Next"]:
-            self.table.setColumnWidth(col_idx, 100)
-            header.resizeSection(col_idx, 100)
+      if col_name == "TeamName":
+        self.table.setColumnWidth(col_idx, 140)
+        header.resizeSection(col_idx, 140)
+      elif col_name in ["Gap to Leader", "Gap to Next"]:
+        self.table.setColumnWidth(col_idx, 100)
+        header.resizeSection(col_idx, 100)
 
     self.table.resizeRowsToContents()
