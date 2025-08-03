@@ -10,6 +10,7 @@ from data.race_results import fetch_race_results
 from data.qualifying_results import fetch_qualifying_results
 from data.free_practice_results import fetch_free_practice_results
 from data.schedule import get_race_schedule
+from data.app_settings import load_settings, save_settings
 
 import datetime
 import pandas as pd
@@ -50,6 +51,21 @@ class MainWindow(QMainWindow):
       self.tables[session] = table
       self.tabs.addTab(table, session)
 
+    settings = load_settings()
+    if settings:
+      self.year_dropdown.setCurrentText(str(settings.get("year", self.year_dropdown.currentText())))
+      self.update_gp_dropdown(self.year_dropdown.currentText())
+
+      saved_gp_name = settings.get("gp_name")
+      if saved_gp_name:
+        for i in range(self.gp_dropdown.count()):
+          if saved_gp_name in self.gp_dropdown.itemText(i):
+            self.gp_dropdown.setCurrentIndex(i)
+            break
+      
+      self.tabs.setCurrentIndex(settings.get("tab_index", 0))
+
+    self.load_all_sessions()
 
     main_layout = QVBoxLayout()
     main_layout.addLayout(controls_layout)
@@ -142,3 +158,12 @@ class MainWindow(QMainWindow):
         header.resizeSection(col_idx, 100)
 
     table_widget.resizeRowsToContents()
+
+  def closeEvent(self, event):
+    settings = {
+      "year": int(self.year_dropdown.currentText()),
+      "gp_name": self.gp_dropdown.currentText(),
+      "tab_index": self.tabs.currentIndex()
+    }
+    save_settings(settings)
+    event.accept()
