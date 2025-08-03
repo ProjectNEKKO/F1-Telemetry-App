@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
   QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout,
-  QWidget, QHeaderView, QHBoxLayout, QLabel, QPushButton, QComboBox
+  QWidget, QHeaderView, QHBoxLayout, QLabel, QPushButton, QComboBox, QTabWidget,
+
 )
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtCore import Qt
@@ -18,8 +19,8 @@ class MainWindow(QMainWindow):
   def __init__(self):
     super().__init__()
     self.setWindowTitle("F1 Race Results")
-    self.resize(850, 600)
-    self.setMinimumSize(750, 550)
+    self.resize(1000, 580)
+    self.setMinimumSize(900, 580)
 
     self.year_dropdown = QComboBox()
     current_year = datetime.datetime.now().year
@@ -27,34 +28,36 @@ class MainWindow(QMainWindow):
     self.year_dropdown.currentTextChanged.connect(self.update_gp_dropdown)
 
     self.gp_dropdown = QComboBox()
-    self.update_gp_dropdown(self.year_dropdown.currentText())  # initial
+    self.update_gp_dropdown(self.year_dropdown.currentText())  
 
     self.session_dropdown = QComboBox()
     self.session_dropdown.addItems(["R", "Q", "FP1", "FP2", "FP3"])
 
-    load_button = QPushButton("Load")
-    load_button.clicked.connect(self.load_results)
+    load_button = QPushButton("Load All Sessions")
+    load_button.clicked.connect(self.load_all_sessions)
 
     controls_layout = QHBoxLayout()
     controls_layout.addWidget(QLabel("Year:"))
     controls_layout.addWidget(self.year_dropdown)
     controls_layout.addWidget(QLabel("Grand Prix:"))
     controls_layout.addWidget(self.gp_dropdown)
-    controls_layout.addWidget(QLabel("Session:"))
-    controls_layout.addWidget(self.session_dropdown)
     controls_layout.addWidget(load_button)
 
-    self.table = QTableWidget()
+    self.tabs = QTabWidget()
+    self.tables = {}
+    for session in ["Race", "Qualifying", "FP3", "FP2", "FP1"]:
+      table = QTableWidget()
+      self.tables[session] = table
+      self.tabs.addTab(table, session)
+
 
     main_layout = QVBoxLayout()
     main_layout.addLayout(controls_layout)
-    main_layout.addWidget(self.table)
+    main_layout.addWidget(self.tabs)
 
     container = QWidget()
     container.setLayout(main_layout)
     self.setCentralWidget(container)
-
-    self.load_results()
 
   def update_gp_dropdown(self, year):
     self.gp_dropdown.clear()
@@ -62,24 +65,25 @@ class MainWindow(QMainWindow):
     for rnd, name in schedule:
       self.gp_dropdown.addItem(f"{rnd} - {name}", rnd)
 
-  def load_results(self):
+  def load_all_sessions(self):
     year = int(self.year_dropdown.currentText())
     round_number = int(self.gp_dropdown.currentData())  
-    session_type = self.session_dropdown.currentText()
+    
+    race_df = fetch_race_results(year, round_number, "R")
+    self.update_table(self.tables["Race"], race_df)
 
-    if session_type == "R":
-        results_df = fetch_race_results(year, round_number, session_type)
-    elif session_type == "Q":
-        results_df = fetch_qualifying_results(year, round_number)
-    elif session_type in ["FP1", "FP2", "FP3"]:
-      results_df = fetch_free_practice_results(year, round_number, session_type)
-    else:
-        results_df = None
+    quali_df = fetch_qualifying_results(year, round_number)
+    self.update_table(self.tables["Qualifying"], quali_df)
 
-    if results_df is not None:
-        self.update_table(results_df)
+    for fp in ["FP1", "FP2", "FP3"]:
+      fp_df = fetch_free_practice_results(year, round_number, fp)
+      self.update_table(self.tables[fp], fp_df)
 
-  def update_table(self, results_df):
+  def update_table(self, table_widget, results_df):
+    if results_df is None or results_df.empty:
+      table_widget.clear()
+      return
+
     if "TeamColor" in results_df.columns:
       self.team_colors = results_df["TeamColor"].tolist()
       results_df = results_df.drop(columns=["TeamColor"])
@@ -88,10 +92,10 @@ class MainWindow(QMainWindow):
 
     results_df = results_df.rename(columns={"Abbreviation": "Driver"})
 
-    self.table.clear()
-    self.table.setRowCount(len(results_df))
-    self.table.setColumnCount(len(results_df.columns))
-    self.table.setHorizontalHeaderLabels(results_df.columns)
+    table_widget.clear()
+    table_widget.setRowCount(len(results_df))
+    table_widget.setColumnCount(len(results_df.columns))
+    table_widget.setHorizontalHeaderLabels(results_df.columns)
 
     time_columns = {"Best Lap", "Q1", "Q2", "Q3"}
 
@@ -123,18 +127,18 @@ class MainWindow(QMainWindow):
           item.setTextAlignment(Qt.AlignVCenter | Qt.AlignCenter)
 
         item.setFont(font)
-        self.table.setItem(row_number, col_idx, item)
+        table_widget.setItem(row_number, col_idx, item)
 
-    header = self.table.horizontalHeader()
+    header = table_widget.horizontalHeader()
     header.setSectionResizeMode(QHeaderView.Stretch)
     header.setMinimumSectionSize(60)
 
     for col_idx, col_name in enumerate(results_df.columns):
       if col_name == "TeamName":
-        self.table.setColumnWidth(col_idx, 140)
+        table_widget.setColumnWidth(col_idx, 140)
         header.resizeSection(col_idx, 140)
       elif col_name in ["Gap to Leader", "Gap to Next"]:
-        self.table.setColumnWidth(col_idx, 100)
+        table_widget.setColumnWidth(col_idx, 100)
         header.resizeSection(col_idx, 100)
 
-    self.table.resizeRowsToContents()
+    table_widget.resizeRowsToContents()
