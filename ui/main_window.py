@@ -50,9 +50,16 @@ class MainWindow(QMainWindow):
 
     self.tabs = QTabWidget()
     self.tables = {}
+    self.no_data_labels = {}
     for session in ["Race", "Qualifying", "FP3", "FP2", "FP1"]:
       table = QTableWidget()
       self.tables[session] = table
+
+      label = QLabel("No data available")
+      label.setAlignment(Qt.AlignCenter)
+      label.setStyleSheet("font-size: 18px; font-weight: bold; color: white;")
+      self.no_data_labels[session] = label
+
       self.tabs.addTab(table, session)
 
     settings = load_settings()
@@ -89,20 +96,55 @@ class MainWindow(QMainWindow):
     year = int(self.year_dropdown.currentText())
     round_number = int(self.gp_dropdown.currentData())  
     
-    race_df = fetch_race_results(year, round_number, "R")
-    self.update_table(self.tables["Race"], race_df)
+    session_map = {
+      "Race": ("R", fetch_race_results),
+      "Qualifying": ("Q", fetch_qualifying_results),
+      "FP1": ("FP1", fetch_free_practice_results),
+      "FP2": ("FP2", fetch_free_practice_results),
+      "FP3": ("FP3", fetch_free_practice_results),
+    }
 
-    quali_df = fetch_qualifying_results(year, round_number)
-    self.update_table(self.tables["Qualifying"], quali_df)
+    for tab_name, (session_code, fetch_func) in session_map.items():
+      try:
+          if tab_name == "Race":
+            df = fetch_func(year, round_number, session_code)
+          elif tab_name == "Qualifying":
+            df = fetch_func(year, round_number)
+          else:
+            df = fetch_func(year, round_number, session_code)
 
-    for fp in ["FP1", "FP2", "FP3"]:
-      fp_df = fetch_free_practice_results(year, round_number, fp)
-      self.update_table(self.tables[fp], fp_df)
+          if df is None or df.empty:
+            self.show_no_data_message(tab_name, f"No {tab_name} for this GP")
+          else:
+            self.update_table(self.tables[tab_name], df)
+
+      except Exception:
+        self.show_no_data_message(tab_name, f"No {tab_name} for this GP")
+
+  def show_no_data_message(self, tab_name, message):
+    table = self.tables[tab_name]
+    table.clear()
+    table.setRowCount(1)
+    table.setColumnCount(1)
+    table.setHorizontalHeaderLabels(["Info"])
+    item = QTableWidgetItem(message)
+    item.setTextAlignment(Qt.AlignCenter)
+    table.setItem(0, 0, item)
 
   def update_table(self, table_widget, results_df):
+    session_name = [name for name, table in self.tables.items() if table is table_widget][0]
+
     if results_df is None or results_df.empty:
-      table_widget.clear()
+      tab_index = self.tabs.indexOf(table_widget)
+      self.tabs.removeTab(tab_index)
+      self.tabs.insertTab(tab_index, self.no_data_labels[session_name], session_name)
       return
+    else:
+      tab_index = self.tabs.indexOf(self.no_data_labels[session_name])
+      if tab_index != -1:
+        self.tabs.removeTab(tab_index)
+        self.tabs.insertTab(tab_index, table_widget, session_name)
+
 
     if "TeamColor" in results_df.columns:
       self.team_colors = results_df["TeamColor"].tolist()
