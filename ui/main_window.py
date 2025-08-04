@@ -3,7 +3,9 @@ from PySide6.QtWidgets import (
   QWidget, QHeaderView, QHBoxLayout, QLabel, QPushButton, QComboBox, QTabWidget,
 
 )
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import (
+  QColor, QFont, QIcon, QPixmap
+)
 from PySide6.QtCore import Qt
 
 from data.race_results import fetch_race_results
@@ -11,6 +13,8 @@ from data.qualifying_results import fetch_qualifying_results
 from data.free_practice_results import fetch_free_practice_results
 from data.schedule import get_race_schedule
 from data.app_settings import load_settings, save_settings
+
+import fastf1
 
 import datetime
 import pandas as pd
@@ -133,6 +137,18 @@ class MainWindow(QMainWindow):
         font = QFont()
         if col_name == "TeamName":
           font.setBold(True)
+
+          team_name = str(value).lower().replace(" ","_")
+          logo_path = f"assets/team_logos/{team_name}.png"
+          try:
+            pixmap = QPixmap(logo_path)
+            if not pixmap.isNull():
+              icon = QIcon(pixmap)
+              item.setIcon(icon)
+          
+          except:
+            pass
+
           if self.team_colors[row_number]:
             item.setForeground(QColor(self.team_colors[row_number]))
           item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
@@ -148,6 +164,7 @@ class MainWindow(QMainWindow):
     header = table_widget.horizontalHeader()
     header.setSectionResizeMode(QHeaderView.Stretch)
     header.setMinimumSectionSize(60)
+    table_widget.verticalHeader().setDefaultSectionSize(50)
 
     for col_idx, col_name in enumerate(results_df.columns):
       if col_name == "TeamName":
